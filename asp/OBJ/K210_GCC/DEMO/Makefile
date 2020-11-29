@@ -184,7 +184,7 @@ include $(SRCDIR)/ui/snfont_disp/Makefile.config
 #  GDIC Makefile のインクルード
 #
 include $(SRCDIR)/gdic/sipeed_st7789/Makefile.config
-include $(SRCDIR)/gdic/sipeed_ov2640/Makefile.config
+include $(SRCDIR)/gdic/sipeed_ov7740/Makefile.config
 include $(SRCDIR)/gdic/spi_driver/Makefile.config
 include $(SRCDIR)/gdic/m5stickv_axp192/Makefile.config
 
@@ -194,7 +194,7 @@ include $(SRCDIR)/gdic/m5stickv_axp192/Makefile.config
 SYSSVC_DIR := $(SYSSVC_DIR) $(SRCDIR)/syssvc $(SRCDIR)/library $(SRCDIR)/pdic/k210
 SYSSVC_ASMOBJS := $(SYSSVC_ASMOBJS)
 SYSSVC_COBJS := $(SYSSVC_COBJS) banner.o syslog.o serial.o logtask.o riscv64.o \
-			device.o spi.o spi_reg.o dvp.o clock.o malloc.o tlsf.o i2c.o \
+			device.o spi.o spi_reg.o dvp.o clock.o malloc.o tlsf.o i2c.o cambus.o maix_i2c.o \
 				 $(CXXRTS)
 SYSSVC_CFLAGS := $(SYSSVC_CFLAGS)
 SYSSVC_LIBS := $(SYSSVC_LIBS)

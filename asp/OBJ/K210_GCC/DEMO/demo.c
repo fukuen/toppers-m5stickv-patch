@@ -65,7 +65,7 @@
 #include "device.h"
 #include "pinmode.h"
 #include "sipeed_st7789.h"
-#include "sipeed_ov2640.h"
+#include "sipeed_ov7740.h"
 #include "storagedevice.h"
 #ifdef SDEV_SENSE_ONETIME
 #include "spi_driver.h"
@@ -135,7 +135,7 @@ static const Point testPolygon[7] = {
 LCD_Handler_t  LcdHandle;
 LCD_DrawProp_t DrawProp;
 DVP_Handle_t   DvpHandle;
-OV2640_t       CameraHandle;
+OV7740_t       CameraHandle;
 
 uint8_t  sTxBuffer[16];
 
@@ -283,9 +283,9 @@ grapics_test(LCD_Handler_t *hlcd)
 		lcd_drawRect(&DrawProp, hlcd->_width/2 -y/2, hlcd->_height/2 -y/2 , y, y);
 	}
 	for(i = 0 ; i < 3 ; i++){
-		lcd_invertDisplay(hlcd, true);
+		lcd_invertDisplay(hlcd, false); // true
 		dly_tsk(500);
-		lcd_invertDisplay(hlcd, false);
+		lcd_invertDisplay(hlcd, true); // false
 		dly_tsk(500);
 	}
 	lcd_fillScreen(&DrawProp);
@@ -301,7 +301,7 @@ void main_task(intptr_t exinf)
 	SPI_Init_t Init;
 	SPI_Handle_t    *hspi;
 	LCD_Handler_t   *hlcd;
-	OV2640_t        *hcmr;
+	OV7740_t        *hcmr;
 	DVP_Handle_t    *hdvp;
 	uint16_t        *lcd_buffer;
 	ER_UINT	ercd;
@@ -403,7 +403,7 @@ void main_task(intptr_t exinf)
 	hcmr = &CameraHandle;
 	hcmr->frameSize = FRAMESIZE_QVGA;
 	hcmr->pixFormat = PIXFORMAT_RGB565;
-	ov2640_getResolition(hcmr, FRAMESIZE_QVGA);
+	ov7740_getResolition(hcmr, FRAMESIZE_QVGA);
 	hcmr->_resetPoliraty  = ACTIVE_HIGH;
 	hcmr->_pwdnPoliraty   = ACTIVE_HIGH;
 	hcmr->_slaveAddr      = 0x00;
@@ -463,30 +463,31 @@ void main_task(intptr_t exinf)
 	hdvp->Init.RGBAddr    = (uint32_t)atmp;
     dvp_init(hdvp);
 
-	if(ov2640_sensor_ov_detect(hcmr) == E_OK){
+	if(ov7740_sensor_ov_detect(hcmr) == E_OK){
 		syslog_0(LOG_NOTICE, "find ov sensor !");
 	}
-	else if(ov2640_sensro_gc_detect(hcmr) == E_OK){
+	else if(ov7740_sensro_gc_detect(hcmr) == E_OK){
 		syslog_0(LOG_NOTICE, "find gc3028 !");
 	}
-	if(ov2640_reset(hcmr) != E_OK){
-		syslog_0(LOG_ERROR, "ov2640 reset error !");
+	if(ov7740_reset(hcmr) != E_OK){
+		syslog_0(LOG_ERROR, "ov7740 reset error !");
 		slp_tsk();
 	}
-    if(ov2640_set_pixformat(hcmr) != E_OK){
+    if(ov7740_set_pixformat(hcmr) != E_OK){
 		syslog_0(LOG_ERROR, "set pixformat error !");
         slp_tsk();
 	}
-    if(ov2640_set_framesize(hcmr) != E_OK){
+    if(ov7740_set_framesize(hcmr) != E_OK){
 		syslog_0(LOG_ERROR, "set frame size error !");
         slp_tsk();
 	}
-	syslog_1(LOG_NOTICE, "OV2640 id(%d)", ov2640_id(hcmr));
+	ov7740_setInvert(hcmr, true);
+	syslog_1(LOG_NOTICE, "OV7740 id(%d)", ov7740_id(hcmr));
 
 	Init.WorkMode     = SPI_WORK_MODE_0;
 	Init.FrameFormat  = SPI_FF_STANDARD;
 	Init.DataSize     = 8;
-	Init.Prescaler    = 15000000;
+	Init.Prescaler    = 40000000;
 	Init.SignBit      = 0;
 	Init.InstLength   = 8;
 	Init.AddrLength   = 0;
@@ -633,15 +634,15 @@ void main_task(intptr_t exinf)
 			dly_tsk(1000);
 		}
 
-		if((ercd = ov2640_activate(hcmr, true)) != E_OK){
-			syslog_2(LOG_NOTICE, "ov2640 activate error result(%d) id(%d) ##", ercd, ov2640_id(hcmr));
+		if((ercd = ov7740_activate(hcmr, true)) != E_OK){
+			syslog_2(LOG_NOTICE, "ov7740 activate error result(%d) id(%d) ##", ercd, ov7740_id(hcmr));
 			continue;
 		}
 
 		for(i = 0 ; i < 2000 ; i++){
 			if((i % 100) == 0)
 				syslog_1(LOG_NOTICE, "camera count(%d)", i);
-			ercd = ov2640_snapshot(hcmr);
+			ercd = ov7740_snapshot(hcmr);
 			if(ercd == E_OK){
 				uint16_t *p = (uint16_t *)hcmr->_dataBuffer;
 				uint32_t no;
@@ -653,7 +654,7 @@ void main_task(intptr_t exinf)
 				lcd_drawPicture(hlcd, 0, 0, hcmr->_width, hcmr->_height, lcd_buffer);
 			}
 		}
-		ov2640_activate(hcmr, false);
+		ov7740_activate(hcmr, false);
 	}
 	syslog_0(LOG_NOTICE, "## STOP ##");
 	slp_tsk();

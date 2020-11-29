@@ -81,7 +81,6 @@ axp192_init(AXP192_Handler_t *hlcd)
 	/*
 	 *  Clear the interrupts
 	 */
-	syslog(LOG_NOTICE, "STEP1!!!!.");
     aTxBuffer[0] = 0x46;
     aTxBuffer[1] = 0xFF;
 	if((ercd = i2c_send(hi2c, hlcd->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
@@ -92,7 +91,6 @@ axp192_init(AXP192_Handler_t *hlcd)
     /*
 	 *  K210_VCore(DCDC2) set to 0.9V
 	 */
-	syslog(LOG_NOTICE, "STEP2!!!!.");
     aTxBuffer[0] = 0x23;
     aTxBuffer[1] = 0x08;
 	if((ercd = i2c_send(hi2c, hlcd->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)

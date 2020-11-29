@@ -79,6 +79,8 @@ svc_perror(const char *file, int_t line, const char *expr, ER ercd)
 
 static uint32_t aTxBuffer[MAX_BUFFER];
 
+//TODO: DMA32bit probrem
+uint16_t *xbuf;
 
 static void set_dcx_control(LCD_Handler_t *hlcd)
 {
@@ -270,6 +272,13 @@ void lcd_init(LCD_Handler_t *hlcd)
 	 */
 	lcd_writecommand(hlcd, DISPALY_ON);
 	hlcd->mode = 1;
+
+	//TODO: DMA32bit probrem
+	xbuf = (uint16_t *)malloc(ST7789_TFTWIDTH * ST7789_TFTHEIGHT * 2);
+	if(xbuf == NULL){
+		syslog_0(LOG_ERROR, "no xfer buffer !");
+		slp_tsk();
+	}
 }
 
 /*
@@ -464,13 +473,29 @@ lcd_drawPicture(LCD_Handler_t *hlcd, uint16_t x, uint16_t y, uint16_t width, uin
 	if((x >= hlcd->_width) || (y >= hlcd->_height)) return;
 	if((x+width-1) > hlcd->_width)  return;
 	if((y+height-1) > hlcd->_height)  return;
-
+	
 	lcd_setAddrWindow(hlcd, x, y, x+width-1, y+height-1);
     set_dcx_data(hlcd);
-	hspi->Init.DataSize = 32;
+	hspi->Init.DataSize = 16; //32
 	hspi->Init.InstLength = 0;
-	hspi->Init.AddrLength = 32;
-	ercd = spi_core_transmit(hspi, hlcd->cs_sel, (uint8_t *)pbmp, width * height / 2);
+	hspi->Init.AddrLength = 0; //32
+	//TODO: DMA32bit probrem
+//	ercd = spi_core_transmit(hspi, hlcd->cs_sel, (uint8_t *)pbmp, width * height / 2);
+	size_t count = width * height;
+	size_t no;
+	uint16_t *p = (uint16_t *)pbmp;
+	for (no = 0; no < count / 2; no++){
+		xbuf[no * 2]     = *(p);
+		xbuf[no * 2 + 1] = 0;
+		p += 1;
+	}
+	ercd = spi_core_transmit(hspi, hlcd->cs_sel, (uint8_t *)xbuf, width * height / 2);
+	for (no = 0; no < count / 2; no++){
+		xbuf[no * 2]     = *(p);
+		xbuf[no * 2 + 1] = 0;
+		p += 1;
+	}
+	ercd = spi_core_transmit(hspi, hlcd->cs_sel, (uint8_t *)xbuf, width * height / 2);
 #if SPI_WAIT_TIME == 0
 	if(ercd == E_OK)
 		spi_wait(hspi, SPI_CORE_WAIT_TIME);
