@@ -315,6 +315,12 @@ ov7740_set_special_effect(OV7740_t *hcmr, int sde)
 }
 
 void
+ov7740_choice(OV7740_t *hcmr, int8_t choice_dev)
+{
+	if (choice_dev == 1) (hcmr->_pwdnPoliraty == ACTIVE_HIGH) ? (dvp_dcmi_powerdown(hcmr->hdvp, true)) : (dvp_dcmi_powerdown(hcmr->hdvp, false));
+}
+
+void
 ov7740_getResolition(OV7740_t *hcmr, framesize_t frameSize)
 {
 	hcmr->_width    = resolution[frameSize][0];
@@ -341,6 +347,10 @@ ov7740_sensor_ov_detect(OV7740_t *hcmr)
 		hcmr->_resetPoliraty = ACTIVE_LOW;
 
 		/* Pull the sensor out of the reset state,systick_sleep() */
+        dvp_dcmi_powerdown(hdvp, false); //
+        dly_tsk(10);                    //
+        dvp_dcmi_powerdown(hdvp, true);//
+        dly_tsk(10);                    //
 		dvp_dcmi_reset(hdvp, true);
 		dly_tsk(10);
 
@@ -348,12 +358,20 @@ ov7740_sensor_ov_detect(OV7740_t *hcmr)
 		hcmr->_slaveAddr = cambus_scan(hcmr);
 		if(hcmr->_slaveAddr == 0){
 			hcmr->_pwdnPoliraty = ACTIVE_LOW;
-			dvp_dcmi_powerdown(hdvp, false);
-			dly_tsk(10);
+			dvp_dcmi_powerdown(hdvp, false);     //
+			dly_tsk(10);                        //
+//			dvp_dcmi_powerdown(hdvp, true);
+//			dly_tsk(10);
+            dvp_dcmi_reset(hdvp, true);         //
+            dly_tsk(10);                        //
 
 			hcmr->_slaveAddr = cambus_scan(hcmr);
 			if(hcmr->_slaveAddr == 0){
 				hcmr->_resetPoliraty = ACTIVE_HIGH;
+                dvp_dcmi_powerdown(hdvp, true);     //
+                dly_tsk(10);                        //
+                dvp_dcmi_powerdown(hdvp, false);     //
+                dly_tsk(10);                        //
 				dvp_dcmi_reset(hdvp, false);
 				dly_tsk(10);
 

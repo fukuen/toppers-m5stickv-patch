@@ -187,6 +187,7 @@ include $(SRCDIR)/gdic/sipeed_st7789/Makefile.config
 include $(SRCDIR)/gdic/sipeed_ov7740/Makefile.config
 include $(SRCDIR)/gdic/spi_driver/Makefile.config
 include $(SRCDIR)/gdic/m5stickv_axp192/Makefile.config
+include $(SRCDIR)/gdic/maixamigo_axp173/Makefile.config
 
 #
 #  システムサービスに関する定義

@@ -38,11 +38,11 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
 * 
- *  $Id: m5stickv_axp192.c 2416 2019-08-01 18:45:11Z roi $
+ *  $Id: maixamigo_axp173.c 2416 2020-12-03 18:45:11Z fukuen $
  */
 
 /* 
- *  M5STICKV AXP192 制御プログラムの本体
+ *  MAIXAMIGO AXP173 制御プログラムの本体
  */
 
 #include <kernel.h>
@@ -55,7 +55,7 @@
 #include "syssvc/syslog.h"
 #include "kernel_cfg.h"
 #include "device.h"
-#include "m5stickv_axp192.h"
+#include "maixamigo_axp173.h"
 #include "sysctl.h"
 
 #define TXBUFFERSIZE  2
@@ -69,15 +69,33 @@
 static uint8_t aTxBuffer[TXBUFFERSIZE];
 
 /*
- *  AXP192の初期化
+ *  AXP173の初期化
  */
 ER
-axp192_init(AXP192_Handler_t *haxp)
+axp173_init(AXP173_Handler_t *haxp)
 {
 	I2C_Handle_t *hi2c = haxp->hi2c;
 	ER ercd;
 
-//	sysctl_set_power_mode(SYSCTL_POWER_BANK3, SYSCTL_POWER_V33);
+#ifdef MAIXAMIGO
+	/*
+	 *  LDO4 - 0.8V (default 0x48 1.8V)
+	 */
+    aTxBuffer[0] = 0x27;
+    aTxBuffer[1] = 0x20;
+	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
+		return ercd;
+
+    // Wait 1.08ms
+	dly_tsk(2);
+    /*
+	 *  LDO2/3 - LDO2 1.8V / LDO3 3.0V
+	 */
+    aTxBuffer[0] = 0x28;
+    aTxBuffer[1] = 0x0C;
+	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
+		return ercd;
+#else
 	/*
 	 *  Clear the interrupts
 	 */
@@ -88,18 +106,10 @@ axp192_init(AXP192_Handler_t *haxp)
 
     // Wait 1.08ms
 	dly_tsk(2);
-    /*
-	 *  K210_VCore(DCDC2) set to 0.9V
-	 */
-    aTxBuffer[0] = 0x23;
-    aTxBuffer[1] = 0x08;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
 
-    // Wait 1.08ms
-	dly_tsk(2);
 	/*
-	 *  190mA Charging Current
+	 *  set target voltage and current of battery(axp173 datasheet PG.)
+	 *  charge current (default)780mA -> 190mA
 	 */
     aTxBuffer[0] = 0x33;
     aTxBuffer[1] = 0xC1;
@@ -108,93 +118,18 @@ axp192_init(AXP192_Handler_t *haxp)
 
     // Wait 1.08ms
 	dly_tsk(2);
-	/*
-	 *  4s shutdown
-	 */
-    aTxBuffer[0] = 0x36;
-    aTxBuffer[1] = 0x6C;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
 
-    // Wait 1.08ms
-	dly_tsk(2);
-	/*
-	 *  LCD Backlight: GPIO0 3.3V
+    /*
+	 *  REG 10H: EXTEN & DC-DC2 control
 	 */
-    aTxBuffer[0] = 0x91;
-    aTxBuffer[1] = 0xF0;
+	if((ercd = i2c_memread(hi2c, haxp->saddr, 0x10, 1, aTxBuffer, 1)) != E_OK)
+		return ercd;
+    aTxBuffer[1] = aTxBuffer[0] & 0xFC;
+    aTxBuffer[0] = 0x10;
 	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
 		return ercd;
+#endif
 
-    // Wait 1.08ms
-	dly_tsk(2);
-	/*
-	 *  GPIO LDO mode
-	 */
-    aTxBuffer[0] = 0x90;
-    aTxBuffer[1] = 0x02;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
-
-    // Wait 1.08ms
-	dly_tsk(2);
-	/*
-	 *  VDD2.8V net: LDO2 3.3V,  VDD 1.5V net: LDO3 1.8V
-	 */
-    aTxBuffer[0] = 0x28;
-    aTxBuffer[1] = 0xF0;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
-
-    // Wait 1.08ms
-	dly_tsk(2);
-	/*
-	 * VDD1.8V net:  DC-DC3 1.8V
-	 */
-    aTxBuffer[0] = 0x27;
-    aTxBuffer[1] = 0x2C;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
-
-    // Wait 1.08ms
-	dly_tsk(2);
-	/*
-	 *  open all power and EXTEN
-	 */
-    aTxBuffer[0] = 0x12;
-    aTxBuffer[1] = 0xFF;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
-
-    // Wait 1.08ms
-	dly_tsk(2);
-	/*
-	 *  VDD 0.9v net: DC-DC2 0.9V
-	 */
-    aTxBuffer[0] = 0x23;
-    aTxBuffer[1] = 0x08;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
-
-    // Wait 1.08ms
-	dly_tsk(2);
-	/*
-	 *  Cutoff voltage 3.2V
-	 */
-    aTxBuffer[0] = 0x31;
-    aTxBuffer[1] = 0x03;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
-
-    // Wait 1.08ms
-	dly_tsk(2);
-	/*
-	 *  Turnoff Temp Protect (Sensor not exist!)
-	 */
-    aTxBuffer[0] = 0x39;
-    aTxBuffer[1] = 0xFC;
-	if((ercd = i2c_send(hi2c, haxp->saddr, aTxBuffer, TXBUFFERSIZE)) != E_OK)
-		return ercd;
 	return ercd;
 }
 

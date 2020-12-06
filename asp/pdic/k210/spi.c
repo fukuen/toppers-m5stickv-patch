@@ -134,9 +134,12 @@ spi_set_tmod(SPI_Handle_t *hspi, uint32_t tmod)
 	addr_l = init->AddrLength / 4;
 	sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_CTRLR0), (init->WorkMode << hspi->work_mode_offset) | \
 		(init->FrameFormat << hspi->frf_offset) | ((init->DataSize - 1) << hspi->dfs_offset));
-//	sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_SPI_CTRLR0),
-//		((init->WaitCycles << 11) | (inst_l << 8) | (addr_l << 2) | init->IATransMode));
+#if defined(MAIXAMIGO) || defined(MAIXCUBE)
+	sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_SPI_CTRLR0),
+		((init->WaitCycles << 11) | (inst_l << 8) | (addr_l << 2) | init->IATransMode));
+#else
 	sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_SPI_CTRLR0), 0x00000000);
+#endif
 	sil_modw_mem((uint32_t *)(hspi->base+TOFF_SPI_CTRLR0), (3 << hspi->tmod_offset), (tmod << hspi->tmod_offset));
 	return E_OK;
 }
@@ -745,6 +748,68 @@ spi_core_transrecv(SPI_Handle_t *hspi, int8_t ss_no, const uint8_t *tx_buf, uint
 
 #if SPI_WAIT_TIME != 0
 	ercd = spi_inwait(hspi, SPI_WAIT_TIME * len);
+
+	if(hspi->Init.semlock != 0)
+		sig_sem(hspi->Init.semlock);
+#endif
+	return ercd;
+}
+
+/*
+ *  SPI送受信実行関数
+ *  parameter1  hspi: SPIハンドラへのポインタ
+ *  parameter2  ss_no: SS番号
+ *  parameter3  ptxdata: 送信バッファへのポインタ
+ *  parameter4  prxdata: 受信バッファへのポインタ
+ *  parameter5  length: 送受信サイズ
+ *  return ERコード
+ */
+ER
+spi_eerom_transrecv(SPI_Handle_t *hspi, int8_t ss_no, uint8_t *tx_buf, size_t tx_len, uint8_t *rx_buf, size_t rx_len)
+{
+	DMA_Handle_t * hdmarx, *hdmatx;
+    uint8_t frame_width = get_framewidth(hspi->Init.DataSize);
+    size_t v_tx_len = tx_len / frame_width;
+    size_t v_rx_len = rx_len / frame_width;
+	ER ercd = E_OK;
+
+	if(hspi == NULL)
+		return E_PAR;
+
+	if(hspi->Init.semlock != 0)
+		wai_sem(hspi->Init.semlock);
+
+	hspi->xmode = SPI_XMODE_TXRX;
+    spi_set_tmod(hspi, SPI_TMOD_EEROM);
+
+
+	if(hspi->hdmatx != NULL){
+		sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_CTRLR1), (uint32_t)(v_rx_len - 1));
+		sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_DMACR), (SPI_DMACR_TXENABLE | SPI_DMACR_RXENABLE));
+		sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_SSIENR), SPI_SSIENR_ENABLE);
+
+	    hdmarx = spi_dmac_set_single_mode(hspi, 1, ss_no, (void *)(hspi->base+TOFF_SPI_DR), rx_buf, DMAC_ADDR_NOCHANGE, DMAC_ADDR_INCREMENT,
+                           DMAC_MSIZE_1, DMAC_TRANS_WIDTH_32, v_rx_len);
+	    hdmatx = spi_dmac_set_single_mode(hspi, 0, ss_no, tx_buf, (void *)(hspi->base+TOFF_SPI_DR), DMAC_ADDR_INCREMENT, DMAC_ADDR_NOCHANGE,
+                           DMAC_MSIZE_4, DMAC_TRANS_WIDTH_32, v_tx_len);
+
+	    spi_dmac_wait_done(hdmatx);
+	}
+	else{
+		sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_DMACR), SPI_DMACR_RXENABLE);
+		sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_SSIENR), SPI_SSIENR_ENABLE);
+
+	    hdmarx = spi_dmac_set_single_mode(hspi, 1, ss_no, (void *)(hspi->base+TOFF_SPI_DR), rx_buf, DMAC_ADDR_NOCHANGE, DMAC_ADDR_INCREMENT,
+                           DMAC_MSIZE_1, DMAC_TRANS_WIDTH_32, v_tx_len + v_rx_len);
+		spi_send_data_normal2(hspi, -1, (const void *)tx_buf, tx_len + rx_len);
+	}
+	spi_dmac_wait_done(hdmarx);
+
+	sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_SER), 0x00000000);
+	sil_wrw_mem((uint32_t *)(hspi->base+TOFF_SPI_SSIENR), SPI_SSIENR_DISABLE);
+
+#if SPI_WAIT_TIME != 0
+	ercd = spi_inwait(hspi, SPI_WAIT_TIME * (tx_len + rx_len));
 
 	if(hspi->Init.semlock != 0)
 		sig_sem(hspi->Init.semlock);

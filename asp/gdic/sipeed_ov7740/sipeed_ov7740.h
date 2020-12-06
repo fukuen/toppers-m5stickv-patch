@@ -173,6 +173,7 @@ extern ER ov7740_set_auto_exposure(OV7740_t *hcmr, bool_t enable, int exposure_u
 extern ER ov7740_get_exposure_us(OV7740_t *hcmr, int *exposure_us);
 extern ER ov7740_set_auto_whitebal(OV7740_t *hcmr, bool_t enable, float r_gain_db, float g_gain_db, float b_gain_db);
 extern ER ov7740_set_vflip(OV7740_t *hcmr, bool_t enable);
+extern void ov7740_choice(OV7740_t *hcmr, int8_t choice_dev);
 #ifdef USE_GAIN
 extern ER ov7740_set_auto_gain(OV7740_t *hcmr, bool_t enable, float gain_db, float gain_db_ceiling);
 extern ER ov7740_get_gain_db(OV7740_t *hcmr, float *gain_db);

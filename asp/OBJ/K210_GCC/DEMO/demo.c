@@ -77,7 +77,11 @@
 #include "demo.h"
 #include "topamelogo.h"
 #include "i2c.h"
+#if defined(MAIXAMIGO) || defined(MAIXCUBE)
+#include "maixamigo_axp173.h"
+#else
 #include "m5stickv_axp192.h"
+#endif
 
 /*
  *  サービスコールのエラーのログ出力
@@ -141,7 +145,7 @@ uint8_t  sTxBuffer[16];
 
 static uint8_t time_string[12];
 
-#define AXP192_ADDR         (0x34<<1)
+//#define AXP192_ADDR         (0x34<<1)
 
 /*
  *  I2C SEND CALLBACK FUNCTION
@@ -283,10 +287,17 @@ grapics_test(LCD_Handler_t *hlcd)
 		lcd_drawRect(&DrawProp, hlcd->_width/2 -y/2, hlcd->_height/2 -y/2 , y, y);
 	}
 	for(i = 0 ; i < 3 ; i++){
+#if defined(MAIXAMIGO)
+		lcd_invertDisplay(hlcd, true);
+		dly_tsk(500);
+		lcd_invertDisplay(hlcd, false);
+		dly_tsk(500);
+#else
 		lcd_invertDisplay(hlcd, false); // true
 		dly_tsk(500);
 		lcd_invertDisplay(hlcd, true); // false
 		dly_tsk(500);
+#endif
 	}
 	lcd_fillScreen(&DrawProp);
 	lcd_drawBitmap(hlcd, 33, 48, (uint8_t *)topamelogo);
@@ -310,7 +321,11 @@ void main_task(intptr_t exinf)
 	unsigned long atmp;
 	I2C_Init_t i2c_initd;
 	I2C_Handle_t *hi2c;
+#if defined(MAIXAMIGO) || defined(MAIXCUBE)
+	AXP173_Handler_t  axp173Handle;
+#else
 	AXP192_Handler_t  axp192Handle;
+#endif
 #ifdef SDEV_SENSE_ONETIME
 	StorageDevice_t *psdev;
 	SDCARD_Handler_t *hsd = NULL;
@@ -321,6 +336,14 @@ void main_task(intptr_t exinf)
 
 	SVC_PERROR(syslog_msk_log(LOG_UPTO(LOG_INFO), LOG_UPTO(LOG_EMERG)));
 	syslog(LOG_NOTICE, "Sample program starts (exinf = %d).", (int_t) exinf);
+
+#if defined(MAIXAMIGO)
+	syslog(LOG_NOTICE, "Complied with MaixAmigo.");
+#elif defined(MAIXCUBE)
+	syslog(LOG_NOTICE, "Compiled with MaixCube.");
+#else
+	syslog(LOG_NOTICE, "Compiled with M5StickV.");
+#endif
 
 	/*
 	 *  シリアルポートの初期化
@@ -340,8 +363,16 @@ void main_task(intptr_t exinf)
 	i2c_initd.ClockSpeed      = 100000;
 	i2c_initd.OwnAddress1     = 0;
 	i2c_initd.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
+#if defined(MAIXAMIGO)
+	i2c_initd.SclPin          = 24;
+	i2c_initd.SdaPin          = 27;
+#elif defined(MAIXCUBE)
+	i2c_initd.SclPin          = 30;
+	i2c_initd.SdaPin          = 31;
+#else
 	i2c_initd.SclPin          = 28;
 	i2c_initd.SdaPin          = 29;
+#endif
 	i2c_initd.semid           = I2CTRS_SEM;
 	i2c_initd.semlock         = I2CLOC_SEM;
 	syslog_2(LOG_NOTICE, "I2C SDAPIN(%d) SCLPIN(%d)", i2c_initd.SdaPin, i2c_initd.SclPin);
@@ -350,14 +381,25 @@ void main_task(intptr_t exinf)
 		/* Initialization Error */
 		syslog_0(LOG_ERROR, "## I2C ERROR(1) ##");
 	}
-	syslog_1(LOG_NOTICE, "AXP192 INITAILIZE(%d) !", I2C_PORTID);
-
 	hi2c->writecallback = I2C_TxCpltCallback;
 	hi2c->readcallback  = I2C_RxCpltCallback;
 	hi2c->errorcallback = I2C_ErrorCallback;
 //	hi2c->writecallback = NULL;
 //	hi2c->readcallback  = NULL;
 //	hi2c->errorcallback = NULL;
+
+#if defined(MAIXAMIGO) || defined(MAIXCUBE)
+	syslog_1(LOG_NOTICE, "AXP173 INITAILIZE(%d) !", I2C_PORTID);
+
+//	syslog_1(LOG_NOTICE, "AXP173 STATUS(%d) !", hi2c->status);
+	axp173Handle.hi2c  = hi2c;
+	axp173Handle.saddr = AXP173_ADDR;
+	if((ercd = axp173_init(&axp173Handle)) != E_OK){
+		syslog_2(LOG_ERROR, "## AXP173 INIT ERROR(%d)[%08x] ##", ercd, hi2c->ErrorCode);
+//		goto stop_task;
+	}
+#else
+	syslog_1(LOG_NOTICE, "AXP192 INITAILIZE(%d) !", I2C_PORTID);
 
 //	syslog_1(LOG_NOTICE, "AXP192 STATUS(%d) !", hi2c->status);
 	axp192Handle.hi2c  = hi2c;
@@ -366,6 +408,7 @@ void main_task(intptr_t exinf)
 		syslog_2(LOG_ERROR, "## AXP192 INIT ERROR(%d)[%08x] ##", ercd, hi2c->ErrorCode);
 //		goto stop_task;
 	}
+#endif
 
 	pinMode(LED_PIN, OUTPUT);
 	SVC_PERROR(sta_cyc(CYCHDR1));
@@ -481,13 +524,25 @@ void main_task(intptr_t exinf)
 		syslog_0(LOG_ERROR, "set frame size error !");
         slp_tsk();
 	}
+#ifdef MAIXAMIGO
+	ov7740_choice(hcmr, 1);
+#endif
 	ov7740_setInvert(hcmr, true);
 	syslog_1(LOG_NOTICE, "OV7740 id(%d)", ov7740_id(hcmr));
 
 	Init.WorkMode     = SPI_WORK_MODE_0;
+#if defined(MAIXAMIGO) || defined(MAIXCUBE)
+	Init.FrameFormat  = SPI_FF_OCTAL;
+//	Init.FrameFormat  = SPI_FF_STANDARD;
+#else
 	Init.FrameFormat  = SPI_FF_STANDARD;
+#endif
 	Init.DataSize     = 8;
+#if defined(MAIXAMIGO) || defined(MAIXCUBE)
+	Init.Prescaler    = 15000000;
+#else
 	Init.Prescaler    = 40000000;
+#endif
 	Init.SignBit      = 0;
 	Init.InstLength   = 8;
 	Init.AddrLength   = 0;

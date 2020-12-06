@@ -38,15 +38,15 @@
  *  アの利用により直接的または間接的に生じたいかなる損害に関しても，そ
  *  の責任を負わない．
  *
- *  $Id: m5stickv_axp192.h 2416 2017-11-23 11:03:25Z roi $
+ *  $Id: maixamigo_axp173.h 2416 2020-12-03 11:03:25Z fukuen $
  */
 
 /*
- *  M5STICKV AXP192 制御プログラムのヘッダファイル
+ *  MAIXAMIGO AXP173 制御プログラムのヘッダファイル
  */
 
-#ifndef _M5STICKV_AXP192_H_
-#define _M5STICKV_AXP192_H_
+#ifndef _MAIXAMIGO_AXP173_H_
+#define _MAIXAMIGO_AXP173_H_
 
 #ifdef __cplusplus
  extern "C" {
@@ -55,9 +55,9 @@
 #include "device.h"
 #include "i2c.h"
 
-#define AXP192_ADDR         (0x34<<1)
-#define AXP192_SCL          (28)
-#define AXP192_SDA          (29)
+#define AXP173_ADDR         (0x34<<1)
+#define AXP173_SCL          (24)
+#define AXP173_SDA          (27)
 
 #ifndef TOPPERS_MACRO_ONLY
 
@@ -68,12 +68,12 @@ typedef struct
 {
 	I2C_Handle_t            *hi2c;
 	uint16_t                saddr;
-}AXP192_Handler_t;
+}AXP173_Handler_t;
 
 /*
  *  関数のプロトタイプ宣言
  */
-extern ER axp192_init(AXP192_Handler_t *haxp);
+extern ER axp173_init(AXP173_Handler_t *haxp);
 
 #endif /* TOPPERS_MACRO_ONLY */
 
@@ -81,4 +81,4 @@ extern ER axp192_init(AXP192_Handler_t *haxp);
 }
 #endif
 
-#endif	/* _M5STICKV_AXP192_H_ */
+#endif	/* _MAIXAMIGO_AXP173_H_ */

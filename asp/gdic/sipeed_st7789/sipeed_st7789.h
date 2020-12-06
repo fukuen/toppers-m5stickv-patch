@@ -9,7 +9,7 @@
  *              Graduate School of Information Science, Nagoya Univ., JAPAN
  *  Copyright (C) 2015-2019 by TOPPERS PROJECT Educational Working Group.
  *
- *  上記著作権者は，以下の(1)〜(4)の条件を満たす場合に限り，本ソフトウェ
+ *  上記著作権者は，以下の(1)~(4)の条件を満たす場合に限り，本ソフトウェ
  *  ア（本ソフトウェアを改変したものを含む．以下同じ）を使用・複製・改
  *  変・再配布（以下，利用と呼ぶ）することを無償で許諾する．
  *  (1) 本ソフトウェアをソースコードの形で利用する場合には，上記の著作
@@ -61,9 +61,16 @@
 #define CM_RGB888           0x00000001			/* RGB888 color mode */
 #define CM_RGB565           0x00000002			/* RGB565 color mode */
 
+#if defined(MAIXAMIGO)
+#define ST7789_TFTWIDTH  320
+#define ST7789_TFTHEIGHT 480
+#elif defined(MAIXCUBE)
+#define ST7789_TFTWIDTH  240
+#define ST7789_TFTHEIGHT 240
+#else
 #define ST7789_TFTWIDTH  240
 #define ST7789_TFTHEIGHT 320
-
+#endif
 
 #define NO_OPERATION            0x00
 #define SOFTWARE_RESET          0x01
@@ -168,6 +175,31 @@
 /*
  *  LCD DIRECTION
  */
+#if defined(MAIXAMIGO)
+#define DIR_XY_RLUD             0x88
+#define DIR_YX_RLUD             0xA8
+#define DIR_XY_LRUD             0xC8
+#define DIR_YX_LRUD             0xE8
+#define DIR_XY_RLDU             0x08
+#define DIR_YX_RLDU             0x28 //default
+#define DIR_XY_LRDU             0x48
+#define DIR_YX_LRDU             0x68
+#define DIR_XY_MASK             0x20
+#define DIR_RL_MASK             0x40
+#define DIR_UD_MASK             0x80
+#elif defined(MAIXCUBE)
+#define DIR_XY_RLUD             0xC0 //00
+#define DIR_YX_RLUD             0xE0 //20
+#define DIR_XY_LRUD             0x80 //40
+#define DIR_YX_LRUD             0xA0 //60
+#define DIR_XY_RLDU             0x40 //80
+#define DIR_YX_RLDU             0x60 //default A0 -> 60
+#define DIR_XY_LRDU             0x00 //C0
+#define DIR_YX_LRDU             0x20 //E0
+#define DIR_XY_MASK             0x20
+#define DIR_RL_MASK             0x40
+#define DIR_UD_MASK             0x80
+#else
 #define DIR_XY_RLUD             0x00
 #define DIR_YX_RLUD             0x20
 #define DIR_XY_LRUD             0x40
@@ -179,6 +211,7 @@
 #define DIR_XY_MASK             0x20
 #define DIR_RL_MASK             0x40
 #define DIR_UD_MASK             0x80
+#endif
 
 #define TRS_COLOR_T             uint32_t
 

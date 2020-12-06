@@ -265,7 +265,11 @@ void lcd_init(LCD_Handler_t *hlcd)
 	/*
 	 *  inversion on
 	 */
+#if defined(MAIXAMIGO)
+	;
+#else
 	lcd_writecommand(hlcd, INVERSION_DISPALY_ON);
+#endif
 
 	/*
 	 *  display on
@@ -471,11 +475,17 @@ lcd_drawPicture(LCD_Handler_t *hlcd, uint16_t x, uint16_t y, uint16_t width, uin
 	ER ercd = E_OK;
 
 	if((x >= hlcd->_width) || (y >= hlcd->_height)) return;
-	if((x+width-1) > hlcd->_width)  return;
-	if((y+height-1) > hlcd->_height)  return;
+//	if((x+width-1) > hlcd->_width)  return;
+//	if((y+height-1) > hlcd->_height)  return;
 	
 	lcd_setAddrWindow(hlcd, x, y, x+width-1, y+height-1);
     set_dcx_data(hlcd);
+#if defined(MAIXAMIGO) || defined(MAIXCUBE)
+	hspi->Init.DataSize = 32;
+	hspi->Init.InstLength = 0;
+	hspi->Init.AddrLength = 32;
+	ercd = spi_core_transmit(hspi, hlcd->cs_sel, (uint8_t *)pbmp, width * height / 2);
+#else
 	hspi->Init.DataSize = 16; //32
 	hspi->Init.InstLength = 0;
 	hspi->Init.AddrLength = 0; //32
@@ -496,6 +506,7 @@ lcd_drawPicture(LCD_Handler_t *hlcd, uint16_t x, uint16_t y, uint16_t width, uin
 		p += 1;
 	}
 	ercd = spi_core_transmit(hspi, hlcd->cs_sel, (uint8_t *)xbuf, width * height / 2);
+#endif
 #if SPI_WAIT_TIME == 0
 	if(ercd == E_OK)
 		spi_wait(hspi, SPI_CORE_WAIT_TIME);

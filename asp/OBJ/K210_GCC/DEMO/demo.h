@@ -70,17 +70,21 @@
 #define	STACK_SIZE		8192		/* タスクのスタックサイズ */
 #endif /* STACK_SIZE */
 
-
-//#define SIPEED_ST7789_RST_PIN    37
-//#define SIPEED_ST7789_DCX_PIN    38
-//#define SIPEED_ST7789_SS_PIN     36
-//#define SIPEED_ST7789_SCLK_PIN   39
+#if defined(MAIXAMIGO) || defined(MAIXCUBE)
+#define SIPEED_ST7789_RST_PIN    37
+#define SIPEED_ST7789_DCX_PIN    38
+#define SIPEED_ST7789_SS_PIN     36 //-1 //36
+#define SIPEED_ST7789_SCLK_PIN   39 //19 //11 //39
+#define SIPEED_ST7789_MOSI_PIN   -1 //10
+#define SIPEED_ST7789_MISO_PIN   -1 //6
+#else
 #define SIPEED_ST7789_RST_PIN    21
 #define SIPEED_ST7789_DCX_PIN    20
 #define SIPEED_ST7789_SS_PIN     22
 #define SIPEED_ST7789_SCLK_PIN   19
 #define SIPEED_ST7789_MOSI_PIN   18
 #define SIPEED_ST7789_MISO_PIN   -1
+#endif
 
 // default peripheral
 #define SIPEED_ST7789_RST_GPIONUM  6
@@ -89,11 +93,25 @@
 
 #define SPISDCARD_PORTID    0
 
+#if defined(MAIXAMIGO)
+#define SPI_SCK_PIN   11
+#define SPI_MISO_PIN  6
+#define SPI_MOSI_PIN  10
+#define SPI_SS_PIN    26
+#define LED_PIN       15 //green
+#elif defined(MAIXCUBE)
+#define SPI_SCK_PIN   27
+#define SPI_MISO_PIN  26
+#define SPI_MOSI_PIN  28
+#define SPI_SS_PIN    29
+#define LED_PIN       14 //blue
+#else
 #define SPI_SCK_PIN   30 //27
 #define SPI_MISO_PIN  31 //26
 #define SPI_MOSI_PIN  33 //28
 #define SPI_SS_PIN    32 //29
 #define LED_PIN       6  //3		/* D13 */
+#endif
 
 #define SPI_PORTID    SPI1_PORTID
 #define INHNO_SPI     IRQ_VECTOR_SPI0	/* 割込みハンドラ番号 */
