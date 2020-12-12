@@ -153,7 +153,7 @@ typedef struct _OV7740_s {
 
 extern void ov7740_getResolition(OV7740_t *hcmr, framesize_t frameSize);
 extern ER ov7740_sensor_ov_detect(OV7740_t *hcmr);
-extern ER ov7740_sensro_gc_detect(OV7740_t *hcmr);
+extern ER ov7740_sensor_gc_detect(OV7740_t *hcmr);
 extern ER ov7740_reset(OV7740_t *hcmr);
 extern ER ov7740_set_pixformat(OV7740_t *hcmr);
 extern ER ov7740_set_framesize(OV7740_t *hcmr);
@@ -161,6 +161,9 @@ extern ER ov7740_activate(OV7740_t *hcmr, bool_t run);
 extern ER ov7740_snapshot(OV7740_t *hcmr);
 extern ER ov7740_cambus_scan_gc0328(OV7740_t *hcmr);
 extern int ov7740_id(OV7740_t *hcmr);
+extern ER gc0328_reset(OV7740_t *hcmr);
+extern ER gc0328_set_pixformat(OV7740_t *hcmr);
+extern ER gc0328_set_framesize(OV7740_t *hcmr);
 
 extern ER ov7740_setInvert(OV7740_t *hcmr, bool_t invert);
 extern ER ov7740_set_contrast(OV7740_t *hcmr, int level);
